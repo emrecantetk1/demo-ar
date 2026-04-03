@@ -5,392 +5,331 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <title>ELF369 · 14K Gold · AR Viewer</title>
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/4.0.0/model-viewer.min.js"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300;1,400&family=Josefin+Sans:wght@100;300;400&display=swap" rel="stylesheet" />
 
   <style>
-    :root {
-      --gold-bright: #F2C96A;
-      --gold-mid:    #C8941A;
-      --bg:          #0A0806;
-      --bg2:         #110D08;
-      --text:        #EAE0CC;
-      --text-muted:  #8A7A68;
-      --border:      rgba(200,148,26,0.16);
-      --diamond:     #D6EFFF;
+  /* ─── TOKENS ─────────────────────────────────── */
+  :root {
+    --gold:        #F2C96A;
+    --gold-mid:    #C8941A;
+    --panel:       #0E0B08;
+    --panel2:      #161108;
+    --text:        #EAE0CC;
+    --muted:       #7A6A58;
+    --border:      rgba(200,148,26,.18);
+    --diamond-clr: #C8EEFF;
+    --viewer-bg:   #FFFFFF;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%; background: var(--panel);
+    color: var(--text);
+    font-family: 'Josefin Sans', sans-serif;
+    font-weight: 300;
+    overflow: hidden;
+  }
+
+  /* ─── DESKTOP LAYOUT ─────────────────────────── */
+  .app {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    grid-template-rows: 56px 1fr 44px;
+    height: 100dvh;
+  }
+
+  /* ─── HEADER ─────────────────────────────────── */
+  header {
+    grid-column: 1 / -1;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 28px;
+    border-bottom: 1px solid var(--border);
+    background: var(--panel);
+    z-index: 20;
+  }
+  .brand       { display: flex; align-items: baseline; gap: 9px; }
+  .brand-name  { font-family: 'Cormorant Garamond', serif; font-size: 20px; letter-spacing: .14em; color: var(--gold); }
+  .brand-sub   { font-size: 8px; letter-spacing: .36em; text-transform: uppercase; color: var(--muted); }
+  .live-badge  { display: flex; align-items: center; gap: 7px; font-size: 8px; letter-spacing: .28em; text-transform: uppercase; color: var(--muted); }
+  .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gold-mid); animation: pulse 2s ease-in-out infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.3;transform:scale(.7)} }
+
+  /* ─── SIDEBAR (desktop) ──────────────────────── */
+  .sidebar {
+    background: var(--panel2);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    overflow-y: auto;
+    /* grid scroll trick */
+    height: 0; min-height: 100%;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(200,148,26,.2) transparent;
+  }
+  .sidebar::-webkit-scrollbar { width: 3px; }
+  .sidebar::-webkit-scrollbar-thumb { background: rgba(200,148,26,.22); border-radius: 2px; }
+
+  .sb-inner { padding: 24px 20px; display: flex; flex-direction: column; gap: 20px; flex: 1; }
+
+  .product-ref   { font-size: 8px; letter-spacing: .32em; text-transform: uppercase; color: var(--muted); }
+  .product-title { font-family: 'Cormorant Garamond', serif; font-size: 30px; font-weight: 300; line-height: 1.1; color: var(--gold); }
+  .product-sub   { font-size: 8px; letter-spacing: .28em; text-transform: uppercase; color: var(--muted); margin-top: 3px; }
+
+  .divider { height: 1px; background: var(--border); flex-shrink: 0; }
+  .sec-title { font-size: 8px; letter-spacing: .28em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+
+  /* specs */
+  .specs { display: flex; flex-direction: column; gap: 9px; }
+  .spec-row { display: flex; justify-content: space-between; }
+  .spec-label { font-size: 8px; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); }
+  .spec-val   { font-family: 'Cormorant Garamond', serif; font-size: 14px; color: var(--gold); }
+
+  /* swatches */
+  .swatches    { display: flex; gap: 9px; }
+  .swatch {
+    width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color .2s, transform .2s, box-shadow .2s;
+  }
+  .swatch:hover { transform: scale(1.12); }
+  .swatch.active { border-color: var(--gold); box-shadow: 0 0 8px rgba(242,201,106,.35); }
+  .swatch.yellow { background: radial-gradient(circle at 32% 32%, #FFE08A, #D4A520, #8A6200); }
+  .swatch.rose   { background: radial-gradient(circle at 32% 32%, #F2C0A0, #C07848, #7A3820); }
+  .swatch.white  { background: radial-gradient(circle at 32% 32%, #fff, #C8C8C8, #7A7A7A); }
+  .swatch-lbl    { font-size: 8px; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); margin-top: 7px; }
+
+  /* finish buttons */
+  .finish-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .fbtn {
+    padding: 9px 4px; background: transparent;
+    border: 1px solid var(--border); color: var(--muted);
+    font-family: 'Josefin Sans', sans-serif;
+    font-size: 8px; letter-spacing: .22em; text-transform: uppercase;
+    cursor: pointer; transition: all .2s;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+  }
+  .fbtn:hover, .fbtn.active { border-color: var(--gold-mid); color: var(--gold); background: rgba(200,148,26,.06); }
+  .fi { font-size: 13px; }
+
+  /* diamond toggle */
+  .dtoggle {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 13px; border: 1px solid var(--border); cursor: pointer; transition: all .2s;
+  }
+  .dtoggle:hover { border-color: rgba(200,235,255,.35); }
+  .dtoggle.on    { border-color: rgba(200,235,255,.4); background: rgba(200,235,255,.04); }
+  .d-label { display: flex; align-items: center; gap: 9px; }
+  .d-gem   { font-size: 16px; }
+  .d-text  { font-size: 8px; letter-spacing: .24em; text-transform: uppercase; color: var(--muted); }
+  .dtoggle.on .d-text { color: var(--diamond-clr); }
+  .pill { width: 30px; height: 16px; background: var(--border); border-radius: 8px; position: relative; transition: background .2s; }
+  .dtoggle.on .pill { background: rgba(180,225,255,.3); }
+  .pill::after {
+    content: ''; position: absolute; width: 12px; height: 12px; border-radius: 50%;
+    background: var(--muted); top: 2px; left: 2px; transition: left .2s, background .2s;
+  }
+  .dtoggle.on .pill::after { left: 16px; background: var(--diamond-clr); }
+
+  /* PBR sliders */
+  .pbr-box { background: rgba(200,148,26,.04); border: 1px solid var(--border); padding: 13px; display: flex; flex-direction: column; gap: 13px; }
+  .pbr-row { display: flex; flex-direction: column; gap: 6px; }
+  .pbr-head { display: flex; justify-content: space-between; }
+  .pbr-key  { display: flex; align-items: center; gap: 6px; font-size: 8px; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); }
+  .pbr-dot  { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .pbr-num  { font-family: 'Cormorant Garamond', serif; font-size: 14px; color: var(--gold); }
+  .pbr-slider {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 2px; border-radius: 1px; outline: none; cursor: pointer;
+    background: linear-gradient(to right, var(--gold-mid) var(--pct,8%), rgba(200,148,26,.15) var(--pct,8%));
+  }
+  .pbr-slider.d-track {
+    background: linear-gradient(to right, #8DCFEE var(--pct,2%), rgba(140,210,240,.15) var(--pct,2%));
+  }
+  .pbr-slider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%;
+    background: var(--gold); border: 2px solid var(--panel); box-shadow: 0 0 6px rgba(242,201,106,.45); cursor: pointer;
+  }
+  .pbr-slider.d-track::-webkit-slider-thumb { background: var(--diamond-clr); box-shadow: 0 0 6px rgba(200,235,255,.4); }
+  .pbr-slider::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: var(--gold); border: 2px solid var(--panel); cursor: pointer; }
+  .pbr-reset {
+    align-self: flex-end; background: transparent; border: 1px solid var(--border);
+    color: var(--muted); font-family: 'Josefin Sans', sans-serif;
+    font-size: 7px; letter-spacing: .28em; text-transform: uppercase;
+    padding: 4px 10px; cursor: pointer; transition: all .2s;
+  }
+  .pbr-reset:hover { border-color: var(--gold-mid); color: var(--gold); }
+
+  /* color sliders */
+  .color-section { display: flex; flex-direction: column; gap: 11px; }
+  .color-preview-row { display: flex; align-items: center; gap: 10px; }
+  .color-preview {
+    width: 32px; height: 32px; border-radius: 50%;
+    border: 2px solid rgba(255,255,255,.1); flex-shrink: 0;
+    box-shadow: 0 2px 10px rgba(0,0,0,.5); transition: background .1s;
+  }
+  .color-hex { font-size: 9px; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); flex: 1; }
+  .color-hex span { color: var(--gold); }
+  .cslider-row { display: flex; flex-direction: column; gap: 5px; }
+  .cslider-head { display: flex; justify-content: space-between; font-size: 8px; letter-spacing: .18em; text-transform: uppercase; }
+  .cslider-head .lbl { color: var(--muted); }
+  .cslider-head .val { font-family: 'Cormorant Garamond', serif; font-size: 13px; color: var(--gold); }
+  .cslider {
+    -webkit-appearance: none; appearance: none;
+    width: 100%; height: 6px; border-radius: 3px; outline: none; cursor: pointer;
+  }
+  .cslider::-webkit-slider-thumb {
+    -webkit-appearance: none; width: 14px; height: 14px; border-radius: 50%;
+    background: #fff; border: 2px solid var(--panel); box-shadow: 0 0 5px rgba(0,0,0,.5); cursor: pointer;
+  }
+  .cslider::-moz-range-thumb { width: 14px; height: 14px; border-radius: 50%; background: #fff; border: 2px solid var(--panel); cursor: pointer; }
+  #hueSlider { background: linear-gradient(to right,hsl(0,80%,50%),hsl(30,80%,50%),hsl(60,80%,50%),hsl(120,80%,50%),hsl(180,80%,50%),hsl(240,80%,50%),hsl(300,80%,50%),hsl(360,80%,50%)); }
+
+  /* env buttons */
+  .env-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+
+  /* ─── VIEWER (white bg) ───────────────────────── */
+  .viewer-wrap {
+    position: relative; overflow: hidden;
+    background: var(--viewer-bg);
+  }
+  model-viewer {
+    width: 100%; height: 100%;
+    --poster-color: transparent;
+    --progress-bar-color: var(--gold-mid);
+    --progress-bar-height: 2px;
+    background-color: var(--viewer-bg);
+  }
+
+  /* AR button */
+  #ar-btn {
+    position: absolute; bottom: 24px; right: 24px;
+    padding: 11px 20px; background: rgba(10,8,6,.85);
+    border: 1px solid var(--gold-mid); color: var(--gold);
+    font-family: 'Josefin Sans', sans-serif; font-size: 8px; font-weight: 400;
+    letter-spacing: .32em; text-transform: uppercase; cursor: pointer;
+    display: flex; align-items: center; gap: 9px; transition: all .3s; z-index: 5;
+    backdrop-filter: blur(6px);
+  }
+  #ar-btn:hover { background: rgba(200,148,26,.18); box-shadow: 0 0 18px rgba(200,148,26,.25); }
+  #ar-btn svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.5; }
+
+  .hint {
+    position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
+    font-size: 8px; letter-spacing: .28em; text-transform: uppercase; color: #aaa;
+    display: flex; align-items: center; gap: 8px; pointer-events: none;
+    animation: fadeHint 5s ease forwards;
+  }
+  @keyframes fadeHint { 0%{opacity:0} 15%{opacity:1} 75%{opacity:1} 100%{opacity:0} }
+  .hint::before,.hint::after { content:''; width:14px; height:1px; background:rgba(0,0,0,.2); }
+
+  /* ─── FOOTER ─────────────────────────────────── */
+  footer {
+    grid-column: 1/-1;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 28px;
+    border-top: 1px solid var(--border);
+    background: var(--panel);
+  }
+  .footer-stats { display: flex; gap: 20px; }
+  .stat { display: flex; flex-direction: column; gap: 1px; }
+  .stat-label { font-size: 7px; letter-spacing: .28em; text-transform: uppercase; color: var(--muted); }
+  .stat-val   { font-family: 'Cormorant Garamond', serif; font-size: 14px; color: var(--gold); }
+
+  /* ═════════════════════════════════════════════════
+     MOBILE — Bottom Sheet
+     ═════════════════════════════════════════════════ */
+  @media (max-width: 700px) {
+    .app {
+      grid-template-columns: 1fr;
+      grid-template-rows: 52px 1fr;
     }
-    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; background: var(--bg); color: var(--text); font-family: 'Josefin Sans', sans-serif; font-weight: 300; overflow: hidden; }
+    footer { display: none; }
 
-    .app { display: grid; grid-template-columns: 290px 1fr; grid-template-rows: auto 1fr auto; height: 100dvh; }
-
-    header {
-      grid-column: 1/-1; display: flex; align-items: center; justify-content: space-between;
-      padding: 16px 32px; border-bottom: 1px solid var(--border);
-      background: rgba(10,8,6,0.96); backdrop-filter: blur(12px); z-index: 10;
-    }
-    .brand { display: flex; align-items: baseline; gap: 10px; }
-    .brand-name { font-family: 'Cormorant Garamond', serif; font-size: 21px; font-weight: 300; letter-spacing: 0.14em; color: var(--gold-bright); }
-    .brand-sub  { font-size: 9px; letter-spacing: 0.36em; text-transform: uppercase; color: var(--text-muted); }
-    .live-badge { display: flex; align-items: center; gap: 7px; font-size: 9px; letter-spacing: 0.28em; text-transform: uppercase; color: var(--text-muted); }
-    .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gold-mid); animation: pulse 2s ease-in-out infinite; }
-    @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.35;transform:scale(.75)} }
-
+    /* sidebar becomes fixed bottom drawer */
     .sidebar {
-      padding: 28px 22px; border-right: 1px solid var(--border);
-      display: flex; flex-direction: column; gap: 22px;
-      overflow-y: scroll; background: var(--bg2);
-      height: 0; min-height: 100%;       /* grid row içinde scroll çalışması için */
-      scrollbar-width: thin;
-      scrollbar-color: rgba(200,148,26,.25) transparent;
+      position: fixed;
+      inset: auto 0 0 0;
+      z-index: 40;
+      /* fixed height so translateY(100%) is predictable */
+      height: 72dvh;
+      min-height: unset;
+      border-radius: 16px 16px 0 0;
+      border-right: none;
+      border-top: 1px solid var(--border);
+      box-shadow: 0 -12px 48px rgba(0,0,0,.75);
+      /* show only the handle (56px) by default */
+      transform: translateY(calc(100% - 56px));
+      transition: transform .36s cubic-bezier(.4,0,.2,1);
+      overflow: hidden;
+      flex-direction: column;
+      gap: 0;
+      padding: 0;
     }
-    .sidebar::-webkit-scrollbar { width: 4px; }
-    .sidebar::-webkit-scrollbar-thumb { background: rgba(200,148,26,.25); border-radius: 2px; }
-    .sidebar::-webkit-scrollbar-track { background: transparent; }
-    .product-ref   { font-size: 9px; letter-spacing: 0.32em; text-transform: uppercase; color: var(--text-muted); }
-    .product-title { font-family: 'Cormorant Garamond', serif; font-size: 32px; font-weight: 300; line-height: 1.1; color: var(--gold-bright); }
-    .product-sub   { font-size: 9px; letter-spacing: 0.3em; text-transform: uppercase; color: var(--text-muted); margin-top: 4px; }
-    .divider       { height: 1px; background: var(--border); flex-shrink: 0; }
-    .sec-title     { font-size: 9px; letter-spacing: 0.28em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 10px; }
+    .sidebar.open { transform: translateY(0); }
 
-    .specs { display: flex; flex-direction: column; gap: 10px; }
-    .spec-row { display: flex; justify-content: space-between; align-items: center; }
-    .spec-label { font-size: 9px; letter-spacing: 0.22em; text-transform: uppercase; color: var(--text-muted); }
-    .spec-val   { font-family: 'Cormorant Garamond', serif; font-size: 15px; color: var(--gold-bright); }
-
-    /* ── Gold swatches ── */
-    .swatches { display: flex; gap: 10px; }
-    .swatch {
-      width: 30px; height: 30px; border-radius: 50%; cursor: pointer;
-      border: 2px solid transparent;
-      transition: border-color .2s, transform .2s, box-shadow .2s;
-    }
-    .swatch:hover { transform: scale(1.12); }
-    .swatch.active { border-color: var(--gold-bright); box-shadow: 0 0 10px rgba(242,201,106,.35); }
-    /* Accurate from reference image */
-    .swatch.yellow { background: radial-gradient(circle at 30% 30%, #FFE08A, #D4A520, #8A6200); }
-    .swatch.rose   { background: radial-gradient(circle at 30% 30%, #F2C0A0, #C07848, #7A3820); }
-    .swatch.white  { background: radial-gradient(circle at 30% 30%, #FFFFFF, #C8C8C8, #7A7A7A); }
-    .swatch-label  { font-size: 8px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-muted); margin-top: 7px; }
-
-    /* ── Finish buttons ── */
-    .finish-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
-    .finish-btn {
-      padding: 10px 4px; background: transparent;
-      border: 1px solid var(--border); color: var(--text-muted);
-      font-family: 'Josefin Sans', sans-serif; font-size: 8px; letter-spacing: 0.24em; text-transform: uppercase;
-      cursor: pointer; transition: all .2s;
-      display: flex; flex-direction: column; align-items: center; gap: 4px;
-    }
-    .finish-btn:hover, .finish-btn.active {
-      border-color: var(--gold-mid); color: var(--gold-bright); background: rgba(200,148,26,.06);
-    }
-    .finish-icon { font-size: 13px; }
-
-    /* ── Diamond toggle ── */
-    .diamond-toggle {
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 11px 14px; border: 1px solid var(--border); cursor: pointer; transition: all .2s;
-    }
-    .diamond-toggle:hover { border-color: rgba(214,239,255,0.4); }
-    .diamond-toggle.on    { border-color: rgba(214,239,255,0.45); background: rgba(214,239,255,.04); }
-    .d-label { display: flex; align-items: center; gap: 10px; }
-    .d-gem   { font-size: 17px; }
-    .d-text  { font-size: 9px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--text-muted); }
-    .diamond-toggle.on .d-text { color: var(--diamond); }
-    .pill { width: 32px; height: 16px; background: var(--border); border-radius: 8px; position: relative; transition: background .2s; }
-    .diamond-toggle.on .pill { background: rgba(214,239,255,.3); }
-    .pill::after {
-      content:''; position: absolute; width: 12px; height: 12px; border-radius: 50%;
-      background: var(--text-muted); top: 2px; left: 2px; transition: left .2s, background .2s;
-    }
-    .diamond-toggle.on .pill::after { left: 18px; background: var(--diamond); }
-
-    /* ── PBR interactive sliders ── */
-    .pbr-box {
-      background: rgba(200,148,26,.04); border: 1px solid var(--border);
-      padding: 14px 14px; display: flex; flex-direction: column; gap: 14px;
-    }
-    .pbr-row { display: flex; flex-direction: column; gap: 7px; }
-    .pbr-head { display: flex; justify-content: space-between; align-items: center; }
-    .pbr-key  { display: flex; align-items: center; gap: 7px; font-size: 8px; letter-spacing: 0.2em; text-transform: uppercase; color: var(--text-muted); }
-    .pbr-dot  { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-    .pbr-num  { font-family: 'Cormorant Garamond', serif; font-size: 15px; color: var(--gold-bright); min-width: 30px; text-align: right; }
-
-    /* slider track */
-    .pbr-slider {
-      -webkit-appearance: none; appearance: none;
-      width: 100%; height: 2px; border-radius: 1px; outline: none; cursor: pointer;
-      background: linear-gradient(to right, var(--track-fill, var(--gold-mid)) 0%,
-                  var(--track-fill, var(--gold-mid)) var(--pct, 0%),
-                  rgba(200,148,26,.15) var(--pct, 0%));
-    }
-    .pbr-slider.diamond {
-      --track-fill: #8DCFEE;
-      background: linear-gradient(to right, #8DCFEE 0%, #8DCFEE var(--pct, 0%),
-                  rgba(140,210,240,.15) var(--pct, 0%));
-    }
-    .pbr-slider::-webkit-slider-thumb {
-      -webkit-appearance: none; appearance: none;
-      width: 14px; height: 14px; border-radius: 50%;
-      background: var(--thumb-color, var(--gold-bright));
-      border: 2px solid var(--bg);
-      box-shadow: 0 0 7px var(--thumb-glow, rgba(242,201,106,.5));
-      transition: transform .15s;
-    }
-    .pbr-slider.diamond::-webkit-slider-thumb {
-      --thumb-color: #C8EEFF;
-      --thumb-glow: rgba(200,235,255,.45);
-    }
-    .pbr-slider::-webkit-slider-thumb:hover { transform: scale(1.25); }
-    .pbr-slider::-moz-range-thumb {
-      width: 14px; height: 14px; border-radius: 50%;
-      background: var(--gold-bright); border: 2px solid var(--bg);
-      box-shadow: 0 0 7px rgba(242,201,106,.5); cursor: pointer;
-    }
-    /* reset button */
-    .pbr-reset {
-      align-self: flex-end;
-      background: transparent; border: 1px solid var(--border);
-      color: var(--text-muted); font-family: 'Josefin Sans', sans-serif;
-      font-size: 7px; letter-spacing: 0.28em; text-transform: uppercase;
-      padding: 4px 10px; cursor: pointer; transition: all .2s;
-    }
-    .pbr-reset:hover { border-color: var(--gold-mid); color: var(--gold-bright); }
-
-    /* ── Viewer ── */
-    .viewer-wrap {
-      position: relative; overflow: hidden;
-      background: radial-gradient(ellipse 55% 55% at 50% 45%, rgba(200,148,26,.05) 0%, transparent 70%), var(--bg);
-    }
-    model-viewer {
-      width: 100%; height: 100%;
-      --poster-color: transparent;
-      --progress-bar-color: var(--gold-mid);
-      --progress-bar-height: 1px;
-    }
-    .viewer-wrap::after {
-      content:''; position: absolute; inset: 0; pointer-events: none;
-      background: radial-gradient(ellipse 68% 68% at 50% 50%, transparent 45%, rgba(10,8,6,.58) 100%);
-    }
-
-    /* Legend */
-    .legend { position: absolute; top: 18px; left: 18px; display: flex; flex-direction: column; gap: 7px; z-index: 5; pointer-events: none; }
-    .leg-item {
-      display: flex; align-items: center; gap: 8px;
-      font-size: 8px; letter-spacing: 0.24em; text-transform: uppercase; color: var(--text-muted);
-      background: rgba(10,8,6,.58); backdrop-filter: blur(8px);
-      padding: 5px 10px 5px 8px; border-left: 2px solid;
-    }
-    .leg-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-
-    #ar-btn {
-      position: absolute; bottom: 24px; right: 24px;
-      padding: 12px 22px; background: transparent;
-      border: 1px solid var(--gold-mid); color: var(--gold-bright);
-      font-family: 'Josefin Sans', sans-serif; font-size: 9px; font-weight: 400;
-      letter-spacing: 0.34em; text-transform: uppercase; cursor: pointer;
-      display: flex; align-items: center; gap: 10px; transition: all .3s; z-index: 5;
-    }
-    #ar-btn:hover { background: rgba(200,148,26,.1); box-shadow: 0 0 22px rgba(200,148,26,.22); }
-    #ar-btn svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 1.5; }
-
-    .hint {
-      position: absolute; bottom: 24px; left: 50%; transform: translateX(-50%);
-      font-size: 8px; letter-spacing: 0.28em; text-transform: uppercase; color: var(--text-muted);
-      display: flex; align-items: center; gap: 8px; pointer-events: none;
-      animation: fadeHint 5s ease forwards;
-    }
-    @keyframes fadeHint { 0%{opacity:0} 15%{opacity:1} 70%{opacity:1} 100%{opacity:0} }
-    .hint::before,.hint::after { content:''; width:16px; height:1px; background:var(--border); }
-
-    footer {
-      grid-column: 1/-1; display: flex; align-items: center; justify-content: space-between;
-      padding: 11px 32px; border-top: 1px solid var(--border); background: rgba(10,8,6,.96);
-    }
-    .footer-stats { display: flex; gap: 22px; }
-    .stat { display: flex; flex-direction: column; gap: 2px; }
-    .stat-label { font-size: 7px; letter-spacing: 0.28em; text-transform: uppercase; color: var(--text-muted); }
-    .stat-val   { font-family: 'Cormorant Garamond', serif; font-size: 15px; color: var(--gold-bright); }
-
-    /* ── Color sliders ── */
-    .color-section { display: flex; flex-direction: column; gap: 12px; }
-
-    .color-preview-row {
-      display: flex; align-items: center; gap: 10px;
-    }
-    .color-preview {
-      width: 36px; height: 36px; border-radius: 50%;
-      border: 2px solid rgba(255,255,255,0.12);
-      flex-shrink: 0;
-      box-shadow: 0 2px 12px rgba(0,0,0,0.5);
-      transition: background .1s;
-    }
-    .color-hex {
-      font-family: 'Josefin Sans', sans-serif;
-      font-size: 10px; letter-spacing: 0.22em;
-      text-transform: uppercase; color: var(--text-muted);
+    /* scrollable inner content on mobile */
+    .sb-inner {
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 14px 18px 40px;
+      gap: 16px;
       flex: 1;
-    }
-    .color-hex span { color: var(--gold-bright); }
-
-    .color-slider-row { display: flex; flex-direction: column; gap: 6px; }
-    .color-slider-head {
-      display: flex; justify-content: space-between; align-items: center;
-      font-size: 8px; letter-spacing: 0.2em; text-transform: uppercase;
-    }
-    .color-slider-head .lbl { color: var(--text-muted); }
-    .color-slider-head .val {
-      font-family: 'Cormorant Garamond', serif;
-      font-size: 14px; color: var(--gold-bright);
+      min-height: 0;
     }
 
-    /* hue slider — rainbow track */
-    .cslider {
-      -webkit-appearance: none; appearance: none;
-      width: 100%; height: 6px; border-radius: 3px;
-      outline: none; cursor: pointer; border: none;
+    /* AR button stays above sheet */
+    #ar-btn { bottom: 70px; right: 14px; font-size: 8px; padding: 10px 14px; }
+    .hint { display: none; }
+    header { padding: 0 16px; }
+
+    .product-title { font-size: 24px; }
+  }
+
+  /* ─── MOBILE handle (hidden on desktop) ─────── */
+  .sheet-handle {
+    display: none;
+  }
+  @media (max-width: 700px) {
+    .sheet-handle {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 5px;
+      flex-shrink: 0;
+      padding: 10px 18px 10px;
+      cursor: pointer;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel2);
+      user-select: none;
+      -webkit-user-select: none;
+      height: 56px;
+      justify-content: center;
     }
-    .cslider::-webkit-slider-thumb {
-      -webkit-appearance: none; appearance: none;
-      width: 14px; height: 14px; border-radius: 50%;
-      background: #fff;
-      border: 2px solid var(--bg);
-      box-shadow: 0 0 6px rgba(0,0,0,0.6);
-      transition: transform .15s;
+    .handle-bar {
+      width: 34px; height: 3px;
+      background: rgba(200,148,26,.35);
+      border-radius: 2px;
     }
-    .cslider::-webkit-slider-thumb:hover { transform: scale(1.25); }
-    .cslider::-moz-range-thumb {
-      width: 14px; height: 14px; border-radius: 50%;
-      background: #fff; border: 2px solid var(--bg);
-      box-shadow: 0 0 6px rgba(0,0,0,.6); cursor: pointer;
+    .handle-row {
+      display: flex; align-items: center; justify-content: space-between;
+      width: 100%;
     }
-
-    #hueSlider {
-      background: linear-gradient(to right,
-        hsl(0,80%,50%), hsl(20,80%,50%), hsl(40,80%,50%), hsl(60,80%,50%),
-        hsl(80,80%,50%), hsl(120,80%,50%), hsl(160,80%,50%), hsl(200,80%,50%),
-        hsl(240,80%,50%), hsl(280,80%,50%), hsl(320,80%,50%), hsl(360,80%,50%));
+    .handle-title {
+      font-size: 8px; letter-spacing: .28em; text-transform: uppercase;
+      color: var(--gold);
     }
-    /* sat + lum sliders updated dynamically via JS */
-
-    /* ════════════════════════════════
-       MOBILE — Bottom Sheet Drawer
-       ════════════════════════════════ */
-    @media (max-width: 700px) {
-
-      html, body { overflow: hidden; }
-
-      .app {
-        grid-template-columns: 1fr;
-        grid-template-rows: auto 1fr;   /* header + viewer; sidebar is overlay */
-        height: 100dvh;
-      }
-
-      footer { display: none; }
-
-      /* ── Sidebar becomes fixed bottom sheet ── */
-      .sidebar {
-        position: fixed;
-        bottom: 0; left: 0; right: 0;
-        z-index: 30;
-        height: auto;
-        min-height: unset;
-        max-height: 78dvh;
-        border-radius: 18px 18px 0 0;
-        border-right: none;
-        border-top: 1px solid var(--border);
-        flex-direction: column;
-        padding: 0;
-        gap: 0;
-        transform: translateY(calc(100% - 60px));
-        transition: transform 0.38s cubic-bezier(0.4, 0, 0.2, 1);
-        box-shadow: 0 -8px 40px rgba(0,0,0,0.7);
-        overflow: hidden;
-      }
-
-      .sidebar.open {
-        transform: translateY(0);
-      }
-
-      /* handle bar at top of sheet */
-      .sheet-handle {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 6px;
-        padding: 12px 20px 10px;
-        cursor: pointer;
-        flex-shrink: 0;
-        border-bottom: 1px solid var(--border);
-        background: var(--bg2);
-        user-select: none;
-        -webkit-user-select: none;
-      }
-      .handle-bar {
-        width: 36px; height: 3px;
-        background: rgba(200,148,26,.35);
-        border-radius: 2px;
-      }
-      .handle-row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        width: 100%;
-      }
-      .handle-title {
-        font-size: 9px; letter-spacing: 0.3em; text-transform: uppercase;
-        color: var(--gold-bright);
-      }
-      .handle-arrow {
-        font-size: 11px; color: var(--text-muted);
-        transition: transform 0.3s;
-      }
-      .sidebar.open .handle-arrow { transform: rotate(180deg); }
-
-      /* scrollable content area */
-      .sheet-body {
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-        padding: 16px 18px 32px;
-        display: flex;
-        flex-direction: column;
-        gap: 18px;
-        scrollbar-width: thin;
-        scrollbar-color: rgba(200,148,26,.2) transparent;
-      }
-
-      /* hide product title block on mobile (shown in handle) */
-      .mobile-hide { display: none; }
-
-      /* compact divider */
-      .divider { margin: 0; }
-
-      /* AR button stays above sheet */
-      #ar-btn {
-        bottom: 72px;
-        right: 16px;
-        padding: 10px 16px;
-        font-size: 8px;
-      }
-
-      /* hint text hidden on mobile */
-      .hint { display: none; }
-
-      header { padding: 12px 16px; }
+    .handle-caret {
+      font-size: 10px; color: var(--muted);
+      transition: transform .3s;
+      display: inline-block;
     }
-
-    /* desktop: hide mobile-only elements */
-    @media (min-width: 701px) {
-      .sheet-handle { display: none; }
-      .sheet-body   { display: contents; }   /* transparent wrapper on desktop */
-    }
+    .sidebar.open .handle-caret { transform: rotate(180deg); }
+  }
   </style>
 </head>
 <body>
 <div class="app">
 
+  <!-- HEADER -->
   <header>
     <div class="brand">
       <span class="brand-name">Elef</span>
@@ -402,286 +341,222 @@
     </div>
   </header>
 
+  <!-- SIDEBAR / BOTTOM SHEET -->
   <aside class="sidebar" id="sidebar">
 
-    <!-- Mobile bottom sheet handle (hidden on desktop) -->
-    <div class="sheet-handle" onclick="toggleSheet()">
+    <!-- Mobile handle (tap to open/close) -->
+    <div class="sheet-handle" id="sheetHandle">
       <div class="handle-bar"></div>
       <div class="handle-row">
         <span class="handle-title">✦ Materyal &amp; Renk Ayarları</span>
-        <span class="handle-arrow">▲</span>
+        <span class="handle-caret">▲</span>
       </div>
     </div>
 
-    <!-- All controls wrapped for mobile scroll -->
-    <div class="sheet-body">
+    <!-- All controls -->
+    <div class="sb-inner">
 
-    <div class="mobile-hide">
-      <p class="product-ref">Ref. ELF369 · ELF125</p>
-      <h1 class="product-title">14K Gold</h1>
-      <p class="product-sub">Pırlanta Detaylı Koleksiyon</p>
-    </div>
-
-    <div class="divider"></div>
-
-    <!-- Specs -->
-    <div class="specs">
-      <div class="spec-row">
-        <span class="spec-label">Karat</span>
-        <span class="spec-val">14K</span>
-      </div>
-      <div class="spec-row">
-        <span class="spec-label">Yüzey</span>
-        <span class="spec-val" id="finishLabel">Parlak</span>
-      </div>
-    </div>
-
-    <div class="divider"></div>
-
-    <!-- Gold tone -->
-    <div class="color-section">
-      <p class="sec-title">Altın Rengi</p>
-
-      <!-- Preset swatches -->
-      <div class="swatches">
-        <div class="swatch yellow active" onclick="setGoldTone('yellow',this)"></div>
-        <div class="swatch rose"          onclick="setGoldTone('rose',this)"></div>
-        <div class="swatch white"         onclick="setGoldTone('white',this)"></div>
+      <div>
+        <p class="product-ref">Ref. ELF369 · ELF125</p>
+        <h1 class="product-title">14K Gold</h1>
+        <p class="product-sub">Pırlanta Detaylı Koleksiyon</p>
       </div>
 
-      <!-- Live preview + hex -->
-      <div class="color-preview-row">
-        <div class="color-preview" id="colorPreview"></div>
-        <div class="color-hex">HEX <span id="hexVal">#D4A514</span></div>
-      </div>
+      <div class="divider"></div>
 
-      <!-- Hue -->
-      <div class="color-slider-row">
-        <div class="color-slider-head">
-          <span class="lbl">Ton (H)</span>
-          <span class="val" id="hVal">38°</span>
+      <div class="specs">
+        <div class="spec-row">
+          <span class="spec-label">Karat</span><span class="spec-val">14K</span>
         </div>
-        <input class="cslider" id="hueSlider" type="range" min="0" max="360" value="38"
-               oninput="onColorSlider()" />
-      </div>
-
-      <!-- Saturation -->
-      <div class="color-slider-row">
-        <div class="color-slider-head">
-          <span class="lbl">Doygunluk (S)</span>
-          <span class="val" id="sVal">88%</span>
+        <div class="spec-row">
+          <span class="spec-label">Yüzey</span><span class="spec-val" id="finishLabel">Parlak</span>
         </div>
-        <input class="cslider" id="satSlider" type="range" min="0" max="100" value="88"
-               oninput="onColorSlider()" />
       </div>
 
-      <!-- Lightness -->
-      <div class="color-slider-row">
-        <div class="color-slider-head">
-          <span class="lbl">Parlaklık (L)</span>
-          <span class="val" id="lVal">45%</span>
+      <div class="divider"></div>
+
+      <!-- Gold color -->
+      <div class="color-section">
+        <p class="sec-title">Altın Rengi</p>
+        <div class="swatches">
+          <div class="swatch yellow active" onclick="setGoldTone('yellow',this)"></div>
+          <div class="swatch rose"          onclick="setGoldTone('rose',this)"></div>
+          <div class="swatch white"         onclick="setGoldTone('white',this)"></div>
         </div>
-        <input class="cslider" id="lumSlider" type="range" min="5" max="90" value="45"
-               oninput="onColorSlider()" />
+        <div class="color-preview-row">
+          <div class="color-preview" id="colorPreview"></div>
+          <div class="color-hex">HEX <span id="hexVal">#D4A514</span></div>
+        </div>
+        <div class="cslider-row">
+          <div class="cslider-head"><span class="lbl">Ton (H)</span><span class="val" id="hVal">38°</span></div>
+          <input class="cslider" id="hueSlider" type="range" min="0" max="360" value="38" oninput="onColorSlider()">
+        </div>
+        <div class="cslider-row">
+          <div class="cslider-head"><span class="lbl">Doygunluk (S)</span><span class="val" id="sVal">88%</span></div>
+          <input class="cslider" id="satSlider" type="range" min="0" max="100" value="88" oninput="onColorSlider()">
+        </div>
+        <div class="cslider-row">
+          <div class="cslider-head"><span class="lbl">Parlaklık (L)</span><span class="val" id="lVal">45%</span></div>
+          <input class="cslider" id="lumSlider" type="range" min="5" max="90" value="45" oninput="onColorSlider()">
+        </div>
+        <p class="swatch-lbl" id="toneLabel">Sarı Altın</p>
       </div>
 
-      <p class="swatch-label" id="toneLabel">Sarı Altın</p>
-    </div>
+      <div class="divider"></div>
 
-    <div class="divider"></div>
-
-    <!-- Finish -->
-    <div>
-      <p class="sec-title">Yüzey Dokusu</p>
-      <div class="finish-grid">
-        <button class="finish-btn active" onclick="setFinish('polished',this,'Parlak')">
-          <span class="finish-icon">🪞</span>Parlak
-        </button>
-        <button class="finish-btn" onclick="setFinish('satin',this,'Satiné')">
-          <span class="finish-icon">〰</span>Satiné
-        </button>
-        <button class="finish-btn" onclick="setFinish('brushed',this,'Fırçalanmış')">
-          <span class="finish-icon">☁</span>Fırçalanmış
-        </button>
-        <button class="finish-btn" onclick="setFinish('matte',this,'Mat')">
-          <span class="finish-icon">◻</span>Mat
-        </button>
+      <!-- Finish -->
+      <div>
+        <p class="sec-title">Yüzey Dokusu</p>
+        <div class="finish-grid">
+          <button class="fbtn active" id="fb0" onclick="setFinish('polished',0,'Parlak')"><span class="fi">🪞</span>Parlak</button>
+          <button class="fbtn"        id="fb1" onclick="setFinish('satin',1,'Satiné')"><span class="fi">〰</span>Satiné</button>
+          <button class="fbtn"        id="fb2" onclick="setFinish('brushed',2,'Fırçalanmış')"><span class="fi">☁</span>Fırçalanmış</button>
+          <button class="fbtn"        id="fb3" onclick="setFinish('matte',3,'Mat')"><span class="fi">◻</span>Mat</button>
+        </div>
       </div>
-    </div>
 
-    <div class="divider"></div>
+      <div class="divider"></div>
 
-    <!-- Diamond toggle -->
-    <div class="diamond-toggle on" id="dToggle" onclick="toggleDiamond()">
-      <div class="d-label">
-        <span class="d-gem">💎</span>
-        <span class="d-text">Pırlanta / CZ</span>
+      <!-- Diamond toggle -->
+      <div class="dtoggle on" id="dToggle" onclick="toggleDiamond()">
+        <div class="d-label">
+          <span class="d-gem">💎</span>
+          <span class="d-text">Pırlanta / CZ Taşlar</span>
+        </div>
+        <div class="pill"></div>
       </div>
-      <div class="pill"></div>
-    </div>
 
-    <div class="divider"></div>
+      <div class="divider"></div>
 
-    <!-- PBR interactive sliders -->
-    <div class="pbr-box">
-      <p class="sec-title" style="margin-bottom:0">PBR Değerleri</p>
+      <!-- PBR sliders -->
+      <div class="pbr-box">
+        <p class="sec-title" style="margin-bottom:0">PBR Değerleri</p>
 
-      <!-- Metalness -->
-      <div class="pbr-row">
-        <div class="pbr-head">
-          <div class="pbr-key">
-            <div class="pbr-dot" style="background:#D4A520"></div>Metalik
+        <div class="pbr-row">
+          <div class="pbr-head">
+            <div class="pbr-key"><div class="pbr-dot" style="background:#D4A520"></div>Metalik</div>
+            <span class="pbr-num" id="mVal">1.00</span>
           </div>
-          <span class="pbr-num" id="mVal">1.00</span>
+          <input class="pbr-slider" id="sliderM" type="range" min="0" max="100" value="100" oninput="onPBR('M',this.value)">
         </div>
-        <input class="pbr-slider" id="sliderM" type="range" min="0" max="100" value="100"
-               oninput="onSlider('M', this.value)" />
-      </div>
 
-      <!-- Gold roughness -->
-      <div class="pbr-row">
-        <div class="pbr-head">
-          <div class="pbr-key">
-            <div class="pbr-dot" style="background:#C8941A"></div>Altın Pürüzlülük
+        <div class="pbr-row">
+          <div class="pbr-head">
+            <div class="pbr-key"><div class="pbr-dot" style="background:#C8941A"></div>Altın Pürüzlülük</div>
+            <span class="pbr-num" id="rVal">0.08</span>
           </div>
-          <span class="pbr-num" id="rVal">0.08</span>
+          <input class="pbr-slider" id="sliderR" type="range" min="0" max="100" value="8" oninput="onPBR('R',this.value)">
         </div>
-        <input class="pbr-slider" id="sliderR" type="range" min="0" max="100" value="8"
-               oninput="onSlider('R', this.value)" />
-      </div>
 
-      <!-- Diamond roughness -->
-      <div class="pbr-row">
-        <div class="pbr-head">
-          <div class="pbr-key">
-            <div class="pbr-dot" style="background:#D6EFFF"></div>Taş Pürüzlülük
+        <div class="pbr-row">
+          <div class="pbr-head">
+            <div class="pbr-key"><div class="pbr-dot" style="background:#C8EEFF"></div>Taş Pürüzlülük</div>
+            <span class="pbr-num" id="dVal">0.02</span>
           </div>
-          <span class="pbr-num" id="dVal">0.02</span>
+          <input class="pbr-slider d-track" id="sliderD" type="range" min="0" max="100" value="2" oninput="onPBR('D',this.value)">
         </div>
-        <input class="pbr-slider diamond" id="sliderD" type="range" min="0" max="100" value="2"
-               oninput="onSlider('D', this.value)" />
+
+        <button class="pbr-reset" onclick="resetAll()">↺ Sıfırla</button>
       </div>
 
-      <button class="pbr-reset" onclick="resetPBR()">↺ Sıfırla</button>
-    </div>
+      <div class="divider"></div>
 
-    <!-- Env -->
-    <div>
-      <p class="sec-title">Işık Ortamı</p>
-      <div class="finish-grid">
-        <button class="finish-btn active" onclick="setEnv('neutral',this)">Stüdyo</button>
-        <button class="finish-btn" onclick="setEnv('commerce',this)">Ticari</button>
-        <button class="finish-btn" onclick="setEnv('legacy',this)">Klasik</button>
-        <button class="finish-btn" onclick="setEnv('outdoor',this)">Doğal</button>
+      <!-- Env -->
+      <div>
+        <p class="sec-title">Işık Ortamı</p>
+        <div class="env-grid">
+          <button class="fbtn active" id="eb0" onclick="setEnv('neutral',0)">Stüdyo</button>
+          <button class="fbtn"        id="eb1" onclick="setEnv('commerce',1)">Ticari</button>
+          <button class="fbtn"        id="eb2" onclick="setEnv('legacy',2)">Klasik</button>
+          <button class="fbtn"        id="eb3" onclick="setEnv('outdoor',3)">Doğal</button>
+        </div>
       </div>
-    </div>
-    </div><!-- /sheet-body -->
+
+    </div><!-- /sb-inner -->
   </aside>
 
   <!-- VIEWER -->
-  <div class="viewer-wrap">
-    <div class="legend">
-      <div class="leg-item" style="border-color:#D4A520;color:#E8C85A">
-        <div class="leg-dot" style="background:#D4A520"></div>Altın · PBR Metal
-      </div>
-      <div class="leg-item" id="diamondLegend" style="border-color:#D6EFFF;color:#D6EFFF">
-        <div class="leg-dot" style="background:#D6EFFF"></div>Pırlanta · CZ
-      </div>
-    </div>
-
+  <div class="viewer-wrap" id="viewerWrap">
     <model-viewer
       id="mv"
-      src=".assets/ELF369___elf125-1_14kGold.glb"
-      alt="14K Gold Jewelry"
+      src="./assets/ELF369 __elf125-1_14kGold.glb"
+      alt="14K Gold Jewelry ELF369"
       camera-controls
       auto-rotate
-      auto-rotate-delay="1800"
-      rotation-per-second="18deg"
+      auto-rotate-delay="1500"
+      rotation-per-second="20deg"
       environment-image="neutral"
-      exposure="1.3"
-      shadow-intensity="0.5"
-      shadow-softness="0.85"
+      exposure="1.4"
+      shadow-intensity="0.3"
+      shadow-softness="0.9"
       tone-mapping="aces"
       ar
       ar-modes="webxr scene-viewer quick-look"
       ar-scale="auto"
-      camera-orbit="-15deg 72deg 2.2m"
-      min-camera-orbit="auto auto 0.6m"
-      max-camera-orbit="auto auto 7m"
+      camera-orbit="-10deg 78deg 2.4m"
+      min-camera-orbit="auto auto 0.5m"
+      max-camera-orbit="auto auto 8m"
       interaction-prompt="none"
+      style="background-color:#ffffff"
     >
       <button slot="ar-button" id="ar-btn">
         <svg viewBox="0 0 24 24"><path d="M9 3H5a2 2 0 0 0-2 2v4m6-6h10a2 2 0 0 1 2 2v4M9 3v18m0 0h10a2 2 0 0 0 2-2V9M9 21H5a2 2 0 0 1-2-2V9m0 0h18"/></svg>
         Gerçeklikte Dene
       </button>
     </model-viewer>
-
     <div class="hint">Döndür &amp; Yakınlaştır</div>
   </div>
 
+  <!-- FOOTER -->
   <footer>
     <div class="footer-stats">
-      <div class="stat"><span class="stat-label">Render</span><span class="stat-val">PBR · GLTF</span></div>
-      <div class="stat"><span class="stat-label">Tone Map</span><span class="stat-val">ACES</span></div>
+      <div class="stat"><span class="stat-label">Render</span><span class="stat-val">PBR · ACES</span></div>
       <div class="stat"><span class="stat-label">Materyaller</span><span class="stat-val" id="matCount">—</span></div>
+      <div class="stat"><span class="stat-label">Ortam</span><span class="stat-val" id="envLabel">Stüdyo</span></div>
     </div>
     <div class="live-badge" style="opacity:.4">WebXR · iOS QuickLook · Scene Viewer</div>
   </footer>
-</div>
+
+</div><!-- /app -->
 
 <script>
-/*
- * REFERENCE IMAGE ANALYSIS (user-provided ring photo):
- *
- * Material 1 — Yellow Gold (polished bands)
- *   Color:     warm #D4A514  →  linear [0.820, 0.648, 0.078, 1]
- *   Metalness: 1.0
- *   Roughness: 0.08  (mirror-like, high gloss jewellery finish)
- *
- * Material 2 — Rose Gold (brushed/satin band on top)
- *   Color:     #C07848       →  linear [0.752, 0.471, 0.282, 1]
- *   Metalness: 1.0
- *   Roughness: 0.38  (brushed satin — light diffusion but metallic sheen)
- *
- * Material 3 — Diamond / CZ (pavé stones on bands)
- *   Color:     near-white #F5F8FF → linear [0.96, 0.97, 1.00, 1]
- *   Metalness: 0.0  (non-conductor — refractive, not reflective like metal)
- *   Roughness: 0.02  (almost perfect mirror for max sparkle/brilliance)
- *
- * Note: model-viewer PBR API does not support KHR_materials_transmission,
- * so diamonds are rendered as a very smooth dielectric. For full raytraced
- * diamond IOR you'd need a custom Three.js pipeline.
- */
+/* ══════════════════════════════════════════════════
+   STATE
+   ══════════════════════════════════════════════════ */
+const S = {
+  metalness:   1.0,
+  rough:       0.08,
+  diamondR:    0.02,
+  diamonds:    true,
+  tone:        'yellow',
+  customColor: null,   // null = use preset
+};
 
-const mv   = document.getElementById('mv');
-
-/* ── Color lookup (linear sRGB) ── */
 const TONES = {
   yellow: [0.820, 0.648, 0.078, 1],
   rose:   [0.752, 0.471, 0.282, 1],
   white:  [0.718, 0.718, 0.718, 1],
 };
-const TONE_NAMES = { yellow:'Sarı Altın', rose:'Pembe Altın', white:'Beyaz Altın' };
-const ROUGH = { polished:0.08, satin:0.22, brushed:0.38, matte:0.62 };
+const TONE_NAMES  = { yellow:'Sarı Altın', rose:'Pembe Altın', white:'Beyaz Altın' };
+const PRESET_HSL  = { yellow:[38,88,45],   rose:[20,55,56],    white:[0,0,64]     };
+const ROUGH_MAP   = { polished:0.08, satin:0.22, brushed:0.38, matte:0.62 };
 
-/* ── State ── */
-const S = {
-  tone:        'yellow',
-  rough:       0.08,
-  metalness:   1.0,
-  diamondR:    0.02,
-  diamonds:    true,
-  customColor: null,   // null = use TONES[tone], otherwise linear [r,g,b,1]
-};
+const mv = document.getElementById('mv');
 
-/* ── Material type detection ── */
-const isDiamond = n => /diamond|stone|crystal|gem|cz|taş|pirlan|zircon|jewel/i.test(n||'');
-const isRose    = n => /rose|pink|pembe/i.test(n||'');
+/* ══════════════════════════════════════════════════
+   MATERIAL APPLICATION
+   Applies to ALL materials in the GLB.
+   Diamond detection is best-effort by mesh name.
+   ══════════════════════════════════════════════════ */
+const looksLikeDiamond = n =>
+  /diamond|stone|crystal|gem|cz|zircon|pirlan|taş|jewel/i.test(n || '');
 
-/* ── Core: apply all materials ── */
-function apply() {
+const looksLikeRose = n =>
+  /rose|pink|pembe/i.test(n || '');
+
+function applyMaterials() {
   const model = mv.model;
-  if (!model) return;
+  if (!model || !model.materials || model.materials.length === 0) return;
 
   let nGold = 0, nStone = 0;
 
@@ -689,127 +564,90 @@ function apply() {
     const pbr  = mat.pbrMetallicRoughness;
     const name = mat.name || '';
 
-    if (isDiamond(name)) {
+    if (looksLikeDiamond(name)) {
+      /* ── Diamond / CZ ── */
       nStone++;
       if (S.diamonds) {
-        pbr.setBaseColorFactor([0.960, 0.970, 1.000, 1]);
+        pbr.setBaseColorFactor([0.96, 0.97, 1.0, 1]);
         pbr.setMetallicFactor(0.0);
         pbr.setRoughnessFactor(S.diamondR);
       } else {
-        pbr.setBaseColorFactor(TONES[S.tone]);
+        // show as gold when diamonds off
+        const c = S.customColor || TONES[S.tone];
+        pbr.setBaseColorFactor(c);
         pbr.setMetallicFactor(S.metalness);
         pbr.setRoughnessFactor(S.rough);
       }
     } else {
+      /* ── Gold ── */
       nGold++;
       let color = S.customColor ? [...S.customColor] : [...TONES[S.tone]];
       let rough = S.rough;
-      if (!S.customColor && isRose(name) && S.tone === 'yellow') {
+
+      // Rose-named mesh gets rose tone even in yellow mode (matches real ring)
+      if (!S.customColor && looksLikeRose(name) && S.tone === 'yellow') {
         color = [...TONES.rose];
         rough = Math.max(rough, 0.32);
       }
+
       pbr.setBaseColorFactor(color);
       pbr.setMetallicFactor(S.metalness);
       pbr.setRoughnessFactor(rough);
     }
   });
 
-  /* sync slider UI */
-  syncSlider('M', S.metalness * 100);
-  syncSlider('R', S.rough * 100);
-  syncSlider('D', S.diamondR * 100);
+  // Sync slider UI to state (in case called from non-slider path)
+  setPBRSliderUI('M', S.metalness * 100);
+  setPBRSliderUI('R', S.rough     * 100);
+  setPBRSliderUI('D', S.diamondR  * 100);
 
-  document.getElementById('matCount').textContent  = `${nGold + nStone} mat`;
-  document.getElementById('diamondLegend').style.opacity = S.diamonds ? '1' : '0.25';
+  const mc = document.getElementById('matCount');
+  if (mc) mc.textContent = `${nGold + nStone} mat`;
+
+  const dl = document.getElementById('diamondLegend');
+  if (dl) dl.style.opacity = S.diamonds ? '1' : '0.25';
 }
 
-/* ── Slider sync helper (gradient + thumb position) ── */
-function syncSlider(key, val) {
-  const el  = document.getElementById('slider' + key);
-  const num = document.getElementById(key === 'M' ? 'mVal' : key === 'R' ? 'rVal' : 'dVal');
-  if (!el || !num) return;
-  el.value = val;
-  const pct = (val / 100 * 100).toFixed(1) + '%';
-  el.style.setProperty('--pct', pct);
-  num.textContent = (val / 100).toFixed(2);
-}
-
-/* ── Slider input handler ── */
-function onSlider(key, rawVal) {
-  const v = rawVal / 100;
-  if (key === 'M') S.metalness = v;
-  if (key === 'R') { S.rough = v; /* deactivate finish preset buttons */ document.querySelectorAll('.finish-btn').forEach((b,i) => i < 4 && b.classList.remove('active')); document.getElementById('finishLabel').textContent = 'Özel'; }
-  if (key === 'D') S.diamondR = v;
-
-  const pct = (rawVal / 100 * 100).toFixed(1) + '%';
-  document.getElementById('slider' + key).style.setProperty('--pct', pct);
-  document.getElementById(key === 'M' ? 'mVal' : key === 'R' ? 'rVal' : 'dVal').textContent = v.toFixed(2);
-
-  apply();
-}
-
-/* ── Reset PBR to reference values ── */
-function resetPBR() {
-  S.metalness  = 1.0;
-  S.rough      = 0.08;
-  S.diamondR   = 0.02;
-  S.tone       = 'yellow';
-  S.customColor = null;
-
-  // Reset swatches
-  document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
-  document.querySelector('.swatch.yellow').classList.add('active');
-  document.getElementById('toneLabel').textContent = TONE_NAMES.yellow;
+mv.addEventListener('load', () => {
+  applyMaterials();
   syncColorUI(...PRESET_HSL.yellow);
-
-  apply();
-  const finishBtns = Array.from(document.querySelectorAll('.finish-btn')).slice(0, 4);
-  finishBtns.forEach(b => b.classList.remove('active'));
-  if (finishBtns[0]) finishBtns[0].classList.add('active');
-  document.getElementById('finishLabel').textContent = 'Parlak';
-}
-
-/* ════════════════════════
-   MOBILE BOTTOM SHEET
-   ════════════════════════ */
-const sidebar = document.getElementById('sidebar');
-let sheetOpen = false;
-
-function toggleSheet(force) {
-  sheetOpen = force !== undefined ? force : !sheetOpen;
-  sidebar.classList.toggle('open', sheetOpen);
-}
-
-// Close sheet when tapping viewer area
-document.querySelector('.viewer-wrap').addEventListener('click', () => {
-  if (sheetOpen && window.innerWidth <= 700) toggleSheet(false);
-});
-
-// Swipe up/down on handle
-let touchStartY = 0;
-sidebar.addEventListener('touchstart', e => {
-  touchStartY = e.touches[0].clientY;
-}, { passive: true });
-sidebar.addEventListener('touchend', e => {
-  const dy = touchStartY - e.changedTouches[0].clientY;
-  if (Math.abs(dy) > 40) toggleSheet(dy > 0);   // swipe up = open, swipe down = close
-}, { passive: true });
-
-
-  syncSlider('M', 100);
-  syncSlider('R', 8);
-  syncSlider('D', 2);
-  syncColorUI(...PRESET_HSL.yellow);   // init color sliders
-  apply();
   mv.addEventListener('camera-change', () => {
     clearTimeout(mv._rt);
     mv._rt = setTimeout(() => { mv.autoRotate = true; }, 3000);
   });
 });
 
-/* ── Color conversion helpers ── */
+/* ══════════════════════════════════════════════════
+   PBR SLIDERS
+   ══════════════════════════════════════════════════ */
+function setPBRSliderUI(key, pctVal) {
+  const el  = document.getElementById('slider' + key);
+  const num = document.getElementById(key === 'M' ? 'mVal' : key === 'R' ? 'rVal' : 'dVal');
+  if (!el || !num) return;
+  el.value = pctVal;
+  const p = pctVal + '%';
+  el.style.setProperty('--pct', p);
+  num.textContent = (pctVal / 100).toFixed(2);
+}
 
-// HSL (0-360, 0-100, 0-100) → sRGB [0-1]
+function onPBR(key, raw) {
+  const v = raw / 100;
+  if (key === 'M') S.metalness = v;
+  if (key === 'R') {
+    S.rough = v;
+    [0,1,2,3].forEach(i => document.getElementById('fb'+i)?.classList.remove('active'));
+    document.getElementById('finishLabel').textContent = 'Özel';
+  }
+  if (key === 'D') S.diamondR = v;
+  setPBRSliderUI(key, +raw);
+  applyMaterials();
+}
+
+/* ══════════════════════════════════════════════════
+   COLOR HELPERS
+   ══════════════════════════════════════════════════ */
+Math.clamp01 = v => Math.max(0, Math.min(1, v));
+
 function hslToSrgb(h, s, l) {
   s /= 100; l /= 100;
   const k = n => (n + h / 30) % 12;
@@ -817,63 +655,11 @@ function hslToSrgb(h, s, l) {
   const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
   return [f(0), f(8), f(4)];
 }
-
-// sRGB → linear (gamma decode for model-viewer API)
 function toLinear(c) {
   return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
 }
+function srgbToLinear4(rgb) { return [...rgb.map(toLinear), 1]; }
 
-// linear [r,g,b] → hex string
-function linearToHex(lin) {
-  return '#' + lin.slice(0,3).map(v => {
-    const srgb = v <= 0.0031308 ? v * 12.92 : 1.055 * Math.pow(v, 1/2.4) - 0.055;
-    return Math.round(Math.clamp01(srgb) * 255).toString(16).padStart(2,'0');
-  }).join('');
-}
-Math.clamp01 = v => Math.max(0, Math.min(1, v));
-
-// sRGB [r,g,b] → linear [r,g,b,1]
-function srgbToLinear4(rgb) {
-  return [...rgb.map(toLinear), 1];
-}
-
-// hex string → HSL (approx, for display)
-function hexToHsl(hex) {
-  const r = parseInt(hex.slice(1,3),16)/255;
-  const g = parseInt(hex.slice(3,5),16)/255;
-  const b = parseInt(hex.slice(5,7),16)/255;
-  const max = Math.max(r,g,b), min = Math.min(r,g,b);
-  let h=0, s=0, l=(max+min)/2;
-  if (max !== min) {
-    const d = max - min;
-    s = l > 0.5 ? d/(2-max-min) : d/(max+min);
-    switch(max){
-      case r: h = ((g-b)/d + (g<b?6:0))/6; break;
-      case g: h = ((b-r)/d + 2)/6; break;
-      case b: h = ((r-g)/d + 4)/6; break;
-    }
-  }
-  return [Math.round(h*360), Math.round(s*100), Math.round(l*100)];
-}
-
-/* ── Gold preset HSL values ── */
-const PRESET_HSL = {
-  yellow: [38,  88, 45],
-  rose:   [20,  55, 56],
-  white:  [ 0,   0, 64],
-};
-
-/* ── Update sat/lum slider gradient backgrounds ── */
-function updateSliderGradients(h, s, l) {
-  const satSlider = document.getElementById('satSlider');
-  const lumSlider = document.getElementById('lumSlider');
-  satSlider.style.background =
-    `linear-gradient(to right, hsl(${h},0%,${l}%), hsl(${h},100%,${l}%))`;
-  lumSlider.style.background =
-    `linear-gradient(to right, hsl(${h},${s}%,5%), hsl(${h},${s}%,50%), hsl(${h},${s}%,90%))`;
-}
-
-/* ── Sync color UI (preview, hex, slider labels) ── */
 function syncColorUI(h, s, l) {
   document.getElementById('hueSlider').value = h;
   document.getElementById('satSlider').value = s;
@@ -883,77 +669,112 @@ function syncColorUI(h, s, l) {
   document.getElementById('lVal').textContent = l + '%';
 
   const srgb = hslToSrgb(h, s, l);
-  const hex  = '#' + srgb.map(v =>
-    Math.round(Math.clamp01(v) * 255).toString(16).padStart(2,'0')
-  ).join('');
-  document.getElementById('colorPreview').style.background =
-    `radial-gradient(circle at 35% 35%, hsl(${h},${Math.min(s+20,100)}%,${Math.min(l+18,88)}%), hsl(${h},${s}%,${l}%), hsl(${h},${Math.max(s-10,0)}%,${Math.max(l-22,5)}%))`;
+  const hex  = '#' + srgb.map(v => Math.round(Math.clamp01(v)*255).toString(16).padStart(2,'0')).join('');
   document.getElementById('hexVal').textContent = hex.toUpperCase();
-  updateSliderGradients(h, s, l);
+  document.getElementById('colorPreview').style.background =
+    `radial-gradient(circle at 33% 33%, hsl(${h},${Math.min(s+20,100)}%,${Math.min(l+16,86)}%), hsl(${h},${s}%,${l}%), hsl(${h},${Math.max(s-10,0)}%,${Math.max(l-20,5)}%))`;
+
+  // update sat/lum gradient tracks
+  document.getElementById('satSlider').style.background =
+    `linear-gradient(to right, hsl(${h},0%,${l}%), hsl(${h},100%,${l}%))`;
+  document.getElementById('lumSlider').style.background =
+    `linear-gradient(to right, hsl(${h},${s}%,5%), hsl(${h},${s}%,50%), hsl(${h},${s}%,88%))`;
 }
 
-/* ── Color slider input handler ── */
 function onColorSlider() {
   const h = +document.getElementById('hueSlider').value;
   const s = +document.getElementById('satSlider').value;
   const l = +document.getElementById('lumSlider').value;
-
   syncColorUI(h, s, l);
-
-  // Deselect all swatches → custom mode
   document.querySelectorAll('.swatch').forEach(sw => sw.classList.remove('active'));
   document.getElementById('toneLabel').textContent = 'Özel';
-
-  // Update state with custom linear color
-  const srgb = hslToSrgb(h, s, l);
-  S.customColor = srgbToLinear4(srgb);
   S.tone = 'custom';
-  apply();
+  S.customColor = srgbToLinear4(hslToSrgb(h, s, l));
+  applyMaterials();
 }
 
-/* ── Controls ── */
+/* ══════════════════════════════════════════════════
+   CONTROLS
+   ══════════════════════════════════════════════════ */
 function setGoldTone(tone, el) {
   S.tone = tone;
   S.customColor = null;
   document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
   el.classList.add('active');
   document.getElementById('toneLabel').textContent = TONE_NAMES[tone];
-  // Sync HSL sliders to preset
-  const [h,s,l] = PRESET_HSL[tone];
-  syncColorUI(h, s, l);
-  apply();
+  syncColorUI(...PRESET_HSL[tone]);
+  applyMaterials();
 }
-  S.rough = ROUGH[key];
-  document.querySelectorAll('.finish-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
+
+function setFinish(key, idx, label) {
+  S.rough = ROUGH_MAP[key];
+  [0,1,2,3].forEach(i => document.getElementById('fb'+i)?.classList.remove('active'));
+  document.getElementById('fb'+idx)?.classList.add('active');
   document.getElementById('finishLabel').textContent = label;
-  apply();
+  applyMaterials();
 }
 
 function toggleDiamond() {
   S.diamonds = !S.diamonds;
   document.getElementById('dToggle').classList.toggle('on', S.diamonds);
-  apply();
+  applyMaterials();
 }
 
 const ENVS = {
-  neutral:  { img:'neutral',  exp:1.3  },
-  commerce: { img:'commerce', exp:1.6  },
-  legacy:   { img:'legacy',   exp:1.05 },
-  outdoor:  {
-    img:'https://modelviewer.dev/shared-assets/environments/spruit_sunrise_1k_HDR.hdr',
-    exp:0.95
-  },
+  neutral:  { img:'neutral',  exp:1.4,  label:'Stüdyo'  },
+  commerce: { img:'commerce', exp:1.65, label:'Ticari'   },
+  legacy:   { img:'legacy',   exp:1.1,  label:'Klasik'   },
+  outdoor:  { img:'https://modelviewer.dev/shared-assets/environments/spruit_sunrise_1k_HDR.hdr', exp:1.0, label:'Doğal' },
 };
-function setEnv(key, btn) {
-  // Only deactivate env buttons (last row of finish-btns)
-  const allFin = document.querySelectorAll('.finish-btn');
-  const envBtns = Array.from(allFin).slice(-4);
-  envBtns.forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  mv.environmentImage = ENVS[key].img;
-  mv.exposure = ENVS[key].exp;
+function setEnv(key, idx) {
+  [0,1,2,3].forEach(i => document.getElementById('eb'+i)?.classList.remove('active'));
+  document.getElementById('eb'+idx)?.classList.add('active');
+  const cfg = ENVS[key];
+  mv.environmentImage = cfg.img;
+  mv.exposure = cfg.exp;
+  const el = document.getElementById('envLabel');
+  if (el) el.textContent = cfg.label;
 }
+
+function resetAll() {
+  S.metalness = 1.0; S.rough = 0.08; S.diamondR = 0.02;
+  S.tone = 'yellow'; S.customColor = null;
+  document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+  document.querySelector('.swatch.yellow').classList.add('active');
+  document.getElementById('toneLabel').textContent = TONE_NAMES.yellow;
+  syncColorUI(...PRESET_HSL.yellow);
+  [0,1,2,3].forEach(i => document.getElementById('fb'+i)?.classList.remove('active'));
+  document.getElementById('fb0')?.classList.add('active');
+  document.getElementById('finishLabel').textContent = 'Parlak';
+  applyMaterials();
+}
+
+/* ══════════════════════════════════════════════════
+   MOBILE BOTTOM SHEET
+   ══════════════════════════════════════════════════ */
+const sidebar = document.getElementById('sidebar');
+const handle  = document.getElementById('sheetHandle');
+let sheetOpen = false;
+
+function toggleSheet(force) {
+  sheetOpen = (force !== undefined) ? force : !sheetOpen;
+  sidebar.classList.toggle('open', sheetOpen);
+}
+
+if (handle) handle.addEventListener('click', () => toggleSheet());
+
+// Close when tapping viewer
+document.getElementById('viewerWrap').addEventListener('click', e => {
+  if (sheetOpen && window.innerWidth <= 700) toggleSheet(false);
+});
+
+// Swipe gesture
+let touchY0 = 0;
+sidebar.addEventListener('touchstart', e => { touchY0 = e.touches[0].clientY; }, { passive:true });
+sidebar.addEventListener('touchend',   e => {
+  const dy = touchY0 - e.changedTouches[0].clientY;
+  if (Math.abs(dy) > 35) toggleSheet(dy > 0);
+}, { passive:true });
 </script>
 </body>
 </html>
