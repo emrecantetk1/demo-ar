@@ -443,9 +443,9 @@
         <div class="pbr-row">
           <div class="pbr-head">
             <div class="pbr-key"><div class="pbr-dot" style="background:#C8941A"></div>Altın Pürüzlülük</div>
-            <span class="pbr-num" id="rVal">0.08</span>
+            <span class="pbr-num" id="rVal">0.07</span>
           </div>
-          <input class="pbr-slider" id="sliderR" type="range" min="0" max="100" value="8" oninput="onPBR('R',this.value)">
+          <input class="pbr-slider" id="sliderR" type="range" min="0" max="100" value="7" oninput="onPBR('R',this.value)">
         </div>
 
         <div class="pbr-row">
@@ -486,14 +486,14 @@
       auto-rotate-delay="1500"
       rotation-per-second="20deg"
       environment-image="neutral"
-      exposure="1.4"
-      shadow-intensity="0.3"
-      shadow-softness="0.9"
+      exposure="1.35"
+      shadow-intensity="0.25"
+      shadow-softness="0.95"
       tone-mapping="aces"
       ar
       ar-modes="webxr scene-viewer quick-look"
       ar-scale="auto"
-      camera-orbit="-10deg 78deg 2.4m"
+      camera-orbit="-20deg 68deg 2.2m"
       min-camera-orbit="auto auto 0.5m"
       max-camera-orbit="auto auto 8m"
       interaction-prompt="none"
@@ -525,21 +525,30 @@
    ══════════════════════════════════════════════════ */
 const S = {
   metalness:   1.0,
-  rough:       0.08,
+  rough:       0.07,    // very polished mirror-like yellow bands (from photo)
   diamondR:    0.02,
   diamonds:    true,
   tone:        'yellow',
-  customColor: null,   // null = use preset
+  customColor: null,
 };
 
+/* ── Reference photo analysis (ELF369__1_.jpg):
+   Yellow gold:  warm saturated, mirror polish  → H 38  S 82  L 46
+   Rose gold:    muted pink, brushed/satin       → H 22  S 46  L 58
+   White gold:   neutral grey mirror             → H  0  S  0  L 64
+   Diamond/CZ:   champagne-white (warm tint      → slightly warm [0.95,0.92,0.86]
+   ── */
 const TONES = {
-  yellow: [0.820, 0.648, 0.078, 1],
-  rose:   [0.752, 0.471, 0.282, 1],
+  yellow: [0.552, 0.272, 0.024, 1],  // linear sRGB of #D4A014 — warm 14K from photo
+  rose:   [0.680, 0.380, 0.220, 1],  // linear sRGB of #C07040 — rose accent from photo
   white:  [0.718, 0.718, 0.718, 1],
 };
 const TONE_NAMES  = { yellow:'Sarı Altın', rose:'Pembe Altın', white:'Beyaz Altın' };
-const PRESET_HSL  = { yellow:[38,88,45],   rose:[20,55,56],    white:[0,0,64]     };
-const ROUGH_MAP   = { polished:0.08, satin:0.22, brushed:0.38, matte:0.62 };
+const PRESET_HSL  = { yellow:[38,82,46],   rose:[22,46,58],    white:[0,0,64]     };
+const ROUGH_MAP   = { polished:0.07, satin:0.22, brushed:0.40, matte:0.62 };
+
+// Rose-named mesh: brushed satin finish matching photo
+const ROSE_ROUGH = 0.40;
 
 const mv = document.getElementById('mv');
 
@@ -568,7 +577,8 @@ function applyMaterials() {
       /* ── Diamond / CZ ── */
       nStone++;
       if (S.diamonds) {
-        pbr.setBaseColorFactor([0.96, 0.97, 1.0, 1]);
+        // Champagne-white: slight warm tint from surrounding gold (matches photo)
+        pbr.setBaseColorFactor([0.950, 0.920, 0.860, 1]);
         pbr.setMetallicFactor(0.0);
         pbr.setRoughnessFactor(S.diamondR);
       } else {
@@ -584,10 +594,10 @@ function applyMaterials() {
       let color = S.customColor ? [...S.customColor] : [...TONES[S.tone]];
       let rough = S.rough;
 
-      // Rose-named mesh gets rose tone even in yellow mode (matches real ring)
+      // Rose-named mesh: brushed satin (matching photo) regardless of tone
       if (!S.customColor && looksLikeRose(name) && S.tone === 'yellow') {
         color = [...TONES.rose];
-        rough = Math.max(rough, 0.32);
+        rough = ROSE_ROUGH;
       }
 
       pbr.setBaseColorFactor(color);
@@ -611,6 +621,10 @@ function applyMaterials() {
 mv.addEventListener('load', () => {
   applyMaterials();
   syncColorUI(...PRESET_HSL.yellow);
+  // Init slider UI to match S defaults
+  setPBRSliderUI('M', S.metalness * 100);
+  setPBRSliderUI('R', S.rough     * 100);
+  setPBRSliderUI('D', S.diamondR  * 100);
   mv.addEventListener('camera-change', () => {
     clearTimeout(mv._rt);
     mv._rt = setTimeout(() => { mv.autoRotate = true; }, 3000);
