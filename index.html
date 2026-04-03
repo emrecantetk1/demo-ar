@@ -214,6 +214,67 @@
     .stat-label { font-size: 7px; letter-spacing: 0.28em; text-transform: uppercase; color: var(--text-muted); }
     .stat-val   { font-family: 'Cormorant Garamond', serif; font-size: 15px; color: var(--gold-bright); }
 
+    /* ── Color sliders ── */
+    .color-section { display: flex; flex-direction: column; gap: 12px; }
+
+    .color-preview-row {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .color-preview {
+      width: 36px; height: 36px; border-radius: 50%;
+      border: 2px solid rgba(255,255,255,0.12);
+      flex-shrink: 0;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+      transition: background .1s;
+    }
+    .color-hex {
+      font-family: 'Josefin Sans', sans-serif;
+      font-size: 10px; letter-spacing: 0.22em;
+      text-transform: uppercase; color: var(--text-muted);
+      flex: 1;
+    }
+    .color-hex span { color: var(--gold-bright); }
+
+    .color-slider-row { display: flex; flex-direction: column; gap: 6px; }
+    .color-slider-head {
+      display: flex; justify-content: space-between; align-items: center;
+      font-size: 8px; letter-spacing: 0.2em; text-transform: uppercase;
+    }
+    .color-slider-head .lbl { color: var(--text-muted); }
+    .color-slider-head .val {
+      font-family: 'Cormorant Garamond', serif;
+      font-size: 14px; color: var(--gold-bright);
+    }
+
+    /* hue slider — rainbow track */
+    .cslider {
+      -webkit-appearance: none; appearance: none;
+      width: 100%; height: 6px; border-radius: 3px;
+      outline: none; cursor: pointer; border: none;
+    }
+    .cslider::-webkit-slider-thumb {
+      -webkit-appearance: none; appearance: none;
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #fff;
+      border: 2px solid var(--bg);
+      box-shadow: 0 0 6px rgba(0,0,0,0.6);
+      transition: transform .15s;
+    }
+    .cslider::-webkit-slider-thumb:hover { transform: scale(1.25); }
+    .cslider::-moz-range-thumb {
+      width: 14px; height: 14px; border-radius: 50%;
+      background: #fff; border: 2px solid var(--bg);
+      box-shadow: 0 0 6px rgba(0,0,0,.6); cursor: pointer;
+    }
+
+    #hueSlider {
+      background: linear-gradient(to right,
+        hsl(0,80%,50%), hsl(20,80%,50%), hsl(40,80%,50%), hsl(60,80%,50%),
+        hsl(80,80%,50%), hsl(120,80%,50%), hsl(160,80%,50%), hsl(200,80%,50%),
+        hsl(240,80%,50%), hsl(280,80%,50%), hsl(320,80%,50%), hsl(360,80%,50%));
+    }
+    /* sat + lum sliders updated dynamically via JS */
+
     @media (max-width: 700px) {
       .app { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto auto; }
       .sidebar { grid-row: 3; border-right: none; border-top: 1px solid var(--border); flex-direction: row; flex-wrap: wrap; padding: 14px; gap: 14px; max-height: 240px; }
@@ -261,13 +322,52 @@
     <div class="divider"></div>
 
     <!-- Gold tone -->
-    <div>
-      <p class="sec-title">Altın Tonu</p>
+    <div class="color-section">
+      <p class="sec-title">Altın Rengi</p>
+
+      <!-- Preset swatches -->
       <div class="swatches">
         <div class="swatch yellow active" onclick="setGoldTone('yellow',this)"></div>
         <div class="swatch rose"          onclick="setGoldTone('rose',this)"></div>
         <div class="swatch white"         onclick="setGoldTone('white',this)"></div>
       </div>
+
+      <!-- Live preview + hex -->
+      <div class="color-preview-row">
+        <div class="color-preview" id="colorPreview"></div>
+        <div class="color-hex">HEX <span id="hexVal">#D4A514</span></div>
+      </div>
+
+      <!-- Hue -->
+      <div class="color-slider-row">
+        <div class="color-slider-head">
+          <span class="lbl">Ton (H)</span>
+          <span class="val" id="hVal">38°</span>
+        </div>
+        <input class="cslider" id="hueSlider" type="range" min="0" max="360" value="38"
+               oninput="onColorSlider()" />
+      </div>
+
+      <!-- Saturation -->
+      <div class="color-slider-row">
+        <div class="color-slider-head">
+          <span class="lbl">Doygunluk (S)</span>
+          <span class="val" id="sVal">88%</span>
+        </div>
+        <input class="cslider" id="satSlider" type="range" min="0" max="100" value="88"
+               oninput="onColorSlider()" />
+      </div>
+
+      <!-- Lightness -->
+      <div class="color-slider-row">
+        <div class="color-slider-head">
+          <span class="lbl">Parlaklık (L)</span>
+          <span class="val" id="lVal">45%</span>
+        </div>
+        <input class="cslider" id="lumSlider" type="range" min="5" max="90" value="45"
+               oninput="onColorSlider()" />
+      </div>
+
       <p class="swatch-label" id="toneLabel">Sarı Altın</p>
     </div>
 
@@ -373,7 +473,7 @@
 
     <model-viewer
       id="mv"
-      src="assets/ELF369 __elf125-1_14kGold.glb"
+      src=".assets/ELF369___elf125-1_14kGold.glb"
       alt="14K Gold Jewelry"
       camera-controls
       auto-rotate
@@ -448,11 +548,12 @@ const ROUGH = { polished:0.08, satin:0.22, brushed:0.38, matte:0.62 };
 
 /* ── State ── */
 const S = {
-  tone:      'yellow',
-  rough:     0.08,
-  metalness: 1.0,
-  diamondR:  0.02,
-  diamonds:  true,
+  tone:        'yellow',
+  rough:       0.08,
+  metalness:   1.0,
+  diamondR:    0.02,
+  diamonds:    true,
+  customColor: null,   // null = use TONES[tone], otherwise linear [r,g,b,1]
 };
 
 /* ── Material type detection ── */
@@ -483,9 +584,9 @@ function apply() {
       }
     } else {
       nGold++;
-      let color = [...TONES[S.tone]];
+      let color = S.customColor ? [...S.customColor] : [...TONES[S.tone]];
       let rough = S.rough;
-      if (isRose(name) && S.tone === 'yellow') {
+      if (!S.customColor && isRose(name) && S.tone === 'yellow') {
         color = [...TONES.rose];
         rough = Math.max(rough, 0.32);
       }
@@ -531,12 +632,19 @@ function onSlider(key, rawVal) {
 
 /* ── Reset PBR to reference values ── */
 function resetPBR() {
-  S.metalness = 1.0;
-  S.rough     = 0.08;
-  S.diamondR  = 0.02;
-  apply();
+  S.metalness  = 1.0;
+  S.rough      = 0.08;
+  S.diamondR   = 0.02;
+  S.tone       = 'yellow';
+  S.customColor = null;
 
-  /* re-activate "Parlak" finish button */
+  // Reset swatches
+  document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+  document.querySelector('.swatch.yellow').classList.add('active');
+  document.getElementById('toneLabel').textContent = TONE_NAMES.yellow;
+  syncColorUI(...PRESET_HSL.yellow);
+
+  apply();
   const finishBtns = Array.from(document.querySelectorAll('.finish-btn')).slice(0, 4);
   finishBtns.forEach(b => b.classList.remove('active'));
   if (finishBtns[0]) finishBtns[0].classList.add('active');
@@ -544,10 +652,10 @@ function resetPBR() {
 }
 
 mv.addEventListener('load', () => {
-  /* init slider gradients */
   syncSlider('M', 100);
   syncSlider('R', 8);
   syncSlider('D', 2);
+  syncColorUI(...PRESET_HSL.yellow);   // init color sliders
   apply();
   mv.addEventListener('camera-change', () => {
     clearTimeout(mv._rt);
@@ -555,16 +663,122 @@ mv.addEventListener('load', () => {
   });
 });
 
-/* ── Controls ── */
-function setGoldTone(tone, el) {
-  S.tone = tone;
-  document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
-  el.classList.add('active');
-  document.getElementById('toneLabel').textContent = TONE_NAMES[tone];
+/* ── Color conversion helpers ── */
+
+// HSL (0-360, 0-100, 0-100) → sRGB [0-1]
+function hslToSrgb(h, s, l) {
+  s /= 100; l /= 100;
+  const k = n => (n + h / 30) % 12;
+  const a = s * Math.min(l, 1 - l);
+  const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+  return [f(0), f(8), f(4)];
+}
+
+// sRGB → linear (gamma decode for model-viewer API)
+function toLinear(c) {
+  return c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+}
+
+// linear [r,g,b] → hex string
+function linearToHex(lin) {
+  return '#' + lin.slice(0,3).map(v => {
+    const srgb = v <= 0.0031308 ? v * 12.92 : 1.055 * Math.pow(v, 1/2.4) - 0.055;
+    return Math.round(Math.clamp01(srgb) * 255).toString(16).padStart(2,'0');
+  }).join('');
+}
+Math.clamp01 = v => Math.max(0, Math.min(1, v));
+
+// sRGB [r,g,b] → linear [r,g,b,1]
+function srgbToLinear4(rgb) {
+  return [...rgb.map(toLinear), 1];
+}
+
+// hex string → HSL (approx, for display)
+function hexToHsl(hex) {
+  const r = parseInt(hex.slice(1,3),16)/255;
+  const g = parseInt(hex.slice(3,5),16)/255;
+  const b = parseInt(hex.slice(5,7),16)/255;
+  const max = Math.max(r,g,b), min = Math.min(r,g,b);
+  let h=0, s=0, l=(max+min)/2;
+  if (max !== min) {
+    const d = max - min;
+    s = l > 0.5 ? d/(2-max-min) : d/(max+min);
+    switch(max){
+      case r: h = ((g-b)/d + (g<b?6:0))/6; break;
+      case g: h = ((b-r)/d + 2)/6; break;
+      case b: h = ((r-g)/d + 4)/6; break;
+    }
+  }
+  return [Math.round(h*360), Math.round(s*100), Math.round(l*100)];
+}
+
+/* ── Gold preset HSL values ── */
+const PRESET_HSL = {
+  yellow: [38,  88, 45],
+  rose:   [20,  55, 56],
+  white:  [ 0,   0, 64],
+};
+
+/* ── Update sat/lum slider gradient backgrounds ── */
+function updateSliderGradients(h, s, l) {
+  const satSlider = document.getElementById('satSlider');
+  const lumSlider = document.getElementById('lumSlider');
+  satSlider.style.background =
+    `linear-gradient(to right, hsl(${h},0%,${l}%), hsl(${h},100%,${l}%))`;
+  lumSlider.style.background =
+    `linear-gradient(to right, hsl(${h},${s}%,5%), hsl(${h},${s}%,50%), hsl(${h},${s}%,90%))`;
+}
+
+/* ── Sync color UI (preview, hex, slider labels) ── */
+function syncColorUI(h, s, l) {
+  document.getElementById('hueSlider').value = h;
+  document.getElementById('satSlider').value = s;
+  document.getElementById('lumSlider').value = l;
+  document.getElementById('hVal').textContent = h + '°';
+  document.getElementById('sVal').textContent = s + '%';
+  document.getElementById('lVal').textContent = l + '%';
+
+  const srgb = hslToSrgb(h, s, l);
+  const hex  = '#' + srgb.map(v =>
+    Math.round(Math.clamp01(v) * 255).toString(16).padStart(2,'0')
+  ).join('');
+  document.getElementById('colorPreview').style.background =
+    `radial-gradient(circle at 35% 35%, hsl(${h},${Math.min(s+20,100)}%,${Math.min(l+18,88)}%), hsl(${h},${s}%,${l}%), hsl(${h},${Math.max(s-10,0)}%,${Math.max(l-22,5)}%))`;
+  document.getElementById('hexVal').textContent = hex.toUpperCase();
+  updateSliderGradients(h, s, l);
+}
+
+/* ── Color slider input handler ── */
+function onColorSlider() {
+  const h = +document.getElementById('hueSlider').value;
+  const s = +document.getElementById('satSlider').value;
+  const l = +document.getElementById('lumSlider').value;
+
+  syncColorUI(h, s, l);
+
+  // Deselect all swatches → custom mode
+  document.querySelectorAll('.swatch').forEach(sw => sw.classList.remove('active'));
+  document.getElementById('toneLabel').textContent = 'Özel';
+
+  // Update state with custom linear color
+  const srgb = hslToSrgb(h, s, l);
+  S.customColor = srgbToLinear4(srgb);
+  S.tone = 'custom';
   apply();
 }
 
-function setFinish(key, btn, label) {
+/* ── Controls ── */
+function setGoldTone(tone, el) {
+  S.tone = tone;
+  S.customColor = null;
+  document.querySelectorAll('.swatch').forEach(s => s.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('toneLabel').textContent = TONE_NAMES[tone];
+  // Sync HSL sliders to preset
+  const [h,s,l] = PRESET_HSL[tone];
+  syncColorUI(h, s, l);
+  apply();
+}
   S.rough = ROUGH[key];
   document.querySelectorAll('.finish-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
