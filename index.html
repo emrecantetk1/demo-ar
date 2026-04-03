@@ -275,12 +275,116 @@
     }
     /* sat + lum sliders updated dynamically via JS */
 
+    /* ════════════════════════════════
+       MOBILE — Bottom Sheet Drawer
+       ════════════════════════════════ */
     @media (max-width: 700px) {
-      .app { grid-template-columns: 1fr; grid-template-rows: auto 1fr auto auto; }
-      .sidebar { grid-row: 3; border-right: none; border-top: 1px solid var(--border); flex-direction: row; flex-wrap: wrap; padding: 14px; gap: 14px; max-height: 240px; }
-      .sidebar > * { flex: 1 1 130px; }
-      header { padding: 13px 16px; }
-      footer { padding: 10px 16px; }
+
+      html, body { overflow: hidden; }
+
+      .app {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;   /* header + viewer; sidebar is overlay */
+        height: 100dvh;
+      }
+
+      footer { display: none; }
+
+      /* ── Sidebar becomes fixed bottom sheet ── */
+      .sidebar {
+        position: fixed;
+        bottom: 0; left: 0; right: 0;
+        z-index: 30;
+        height: auto;
+        min-height: unset;
+        max-height: 78dvh;
+        border-radius: 18px 18px 0 0;
+        border-right: none;
+        border-top: 1px solid var(--border);
+        flex-direction: column;
+        padding: 0;
+        gap: 0;
+        transform: translateY(calc(100% - 60px));
+        transition: transform 0.38s cubic-bezier(0.4, 0, 0.2, 1);
+        box-shadow: 0 -8px 40px rgba(0,0,0,0.7);
+        overflow: hidden;
+      }
+
+      .sidebar.open {
+        transform: translateY(0);
+      }
+
+      /* handle bar at top of sheet */
+      .sheet-handle {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 6px;
+        padding: 12px 20px 10px;
+        cursor: pointer;
+        flex-shrink: 0;
+        border-bottom: 1px solid var(--border);
+        background: var(--bg2);
+        user-select: none;
+        -webkit-user-select: none;
+      }
+      .handle-bar {
+        width: 36px; height: 3px;
+        background: rgba(200,148,26,.35);
+        border-radius: 2px;
+      }
+      .handle-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        width: 100%;
+      }
+      .handle-title {
+        font-size: 9px; letter-spacing: 0.3em; text-transform: uppercase;
+        color: var(--gold-bright);
+      }
+      .handle-arrow {
+        font-size: 11px; color: var(--text-muted);
+        transition: transform 0.3s;
+      }
+      .sidebar.open .handle-arrow { transform: rotate(180deg); }
+
+      /* scrollable content area */
+      .sheet-body {
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: 16px 18px 32px;
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        scrollbar-width: thin;
+        scrollbar-color: rgba(200,148,26,.2) transparent;
+      }
+
+      /* hide product title block on mobile (shown in handle) */
+      .mobile-hide { display: none; }
+
+      /* compact divider */
+      .divider { margin: 0; }
+
+      /* AR button stays above sheet */
+      #ar-btn {
+        bottom: 72px;
+        right: 16px;
+        padding: 10px 16px;
+        font-size: 8px;
+      }
+
+      /* hint text hidden on mobile */
+      .hint { display: none; }
+
+      header { padding: 12px 16px; }
+    }
+
+    /* desktop: hide mobile-only elements */
+    @media (min-width: 701px) {
+      .sheet-handle { display: none; }
+      .sheet-body   { display: contents; }   /* transparent wrapper on desktop */
     }
   </style>
 </head>
@@ -298,8 +402,21 @@
     </div>
   </header>
 
-  <aside class="sidebar">
-    <div>
+  <aside class="sidebar" id="sidebar">
+
+    <!-- Mobile bottom sheet handle (hidden on desktop) -->
+    <div class="sheet-handle" onclick="toggleSheet()">
+      <div class="handle-bar"></div>
+      <div class="handle-row">
+        <span class="handle-title">✦ Materyal &amp; Renk Ayarları</span>
+        <span class="handle-arrow">▲</span>
+      </div>
+    </div>
+
+    <!-- All controls wrapped for mobile scroll -->
+    <div class="sheet-body">
+
+    <div class="mobile-hide">
       <p class="product-ref">Ref. ELF369 · ELF125</p>
       <h1 class="product-title">14K Gold</h1>
       <p class="product-sub">Pırlanta Detaylı Koleksiyon</p>
@@ -458,6 +575,7 @@
         <button class="finish-btn" onclick="setEnv('outdoor',this)">Doğal</button>
       </div>
     </div>
+    </div><!-- /sheet-body -->
   </aside>
 
   <!-- VIEWER -->
@@ -651,7 +769,33 @@ function resetPBR() {
   document.getElementById('finishLabel').textContent = 'Parlak';
 }
 
-mv.addEventListener('load', () => {
+/* ════════════════════════
+   MOBILE BOTTOM SHEET
+   ════════════════════════ */
+const sidebar = document.getElementById('sidebar');
+let sheetOpen = false;
+
+function toggleSheet(force) {
+  sheetOpen = force !== undefined ? force : !sheetOpen;
+  sidebar.classList.toggle('open', sheetOpen);
+}
+
+// Close sheet when tapping viewer area
+document.querySelector('.viewer-wrap').addEventListener('click', () => {
+  if (sheetOpen && window.innerWidth <= 700) toggleSheet(false);
+});
+
+// Swipe up/down on handle
+let touchStartY = 0;
+sidebar.addEventListener('touchstart', e => {
+  touchStartY = e.touches[0].clientY;
+}, { passive: true });
+sidebar.addEventListener('touchend', e => {
+  const dy = touchStartY - e.changedTouches[0].clientY;
+  if (Math.abs(dy) > 40) toggleSheet(dy > 0);   // swipe up = open, swipe down = close
+}, { passive: true });
+
+
   syncSlider('M', 100);
   syncSlider('R', 8);
   syncSlider('D', 2);
