@@ -408,8 +408,8 @@
       <div>
         <p class="sec-title">Yüzey Dokusu</p>
         <div class="finish-grid">
-          <button class="fbtn active" id="fb0" onclick="setFinish('polished',0,'Parlak')"><span class="fi">🪞</span>Parlak</button>
-          <button class="fbtn"        id="fb1" onclick="setFinish('satin',1,'Satiné')"><span class="fi">〰</span>Satiné</button>
+          <button class="fbtn"        id="fb0" onclick="setFinish('polished',0,'Parlak')"><span class="fi">🪞</span>Parlak</button>
+          <button class="fbtn active" id="fb1" onclick="setFinish('satin',1,'Satiné')"><span class="fi">〰</span>Satiné</button>
           <button class="fbtn"        id="fb2" onclick="setFinish('brushed',2,'Fırçalanmış')"><span class="fi">☁</span>Fırçalanmış</button>
           <button class="fbtn"        id="fb3" onclick="setFinish('matte',3,'Mat')"><span class="fi">◻</span>Mat</button>
         </div>
@@ -443,9 +443,9 @@
         <div class="pbr-row">
           <div class="pbr-head">
             <div class="pbr-key"><div class="pbr-dot" style="background:#C8941A"></div>Altın Pürüzlülük</div>
-            <span class="pbr-num" id="rVal">0.07</span>
+            <span class="pbr-num" id="rVal">0.18</span>
           </div>
-          <input class="pbr-slider" id="sliderR" type="range" min="0" max="100" value="7" oninput="onPBR('R',this.value)">
+          <input class="pbr-slider" id="sliderR" type="range" min="0" max="100" value="18" oninput="onPBR('R',this.value)">
         </div>
 
         <div class="pbr-row">
@@ -493,7 +493,7 @@
       ar
       ar-modes="webxr scene-viewer quick-look"
       ar-scale="auto"
-      camera-orbit="-20deg 68deg 2.2m"
+      camera-orbit="-15deg 72deg 2.2m"
       min-camera-orbit="auto auto 0.5m"
       max-camera-orbit="auto auto 8m"
       interaction-prompt="none"
@@ -525,30 +525,31 @@
    ══════════════════════════════════════════════════ */
 const S = {
   metalness:   1.0,
-  rough:       0.07,    // very polished mirror-like yellow bands (from photo)
+  rough:       0.18,    // rich satin — matches photo
   diamondR:    0.02,
   diamonds:    true,
   tone:        'yellow',
   customColor: null,
 };
 
-/* ── Reference photo analysis (ELF369__1_.jpg):
-   Yellow gold:  warm saturated, mirror polish  → H 38  S 82  L 46
-   Rose gold:    muted pink, brushed/satin       → H 22  S 46  L 58
-   White gold:   neutral grey mirror             → H  0  S  0  L 64
-   Diamond/CZ:   champagne-white (warm tint      → slightly warm [0.95,0.92,0.86]
+/* ── Reference photo analysis (1775489052621_image.png):
+   Yellow gold:  deep warm amber, subtle satin — NOT mirror  → H 36  S 72  L 38
+   Rose gold:    muted dusty pink, smooth satin              → H 22  S 46  L 58
+   Both share the same "rich satin" quality — neither is mirror-polish
+   Diamond/CZ:   warm white with champagne tint
    ── */
 const TONES = {
-  yellow: [0.552, 0.272, 0.024, 1],  // linear sRGB of #D4A014 — warm 14K from photo
-  rose:   [0.680, 0.380, 0.220, 1],  // linear sRGB of #C07040 — rose accent from photo
+  yellow: [0.400, 0.200, 0.016, 1],  // linear sRGB ~#A07010 — deep amber from photo
+  rose:   [0.680, 0.380, 0.220, 1],  // linear sRGB ~#C07040
   white:  [0.718, 0.718, 0.718, 1],
 };
 const TONE_NAMES  = { yellow:'Sarı Altın', rose:'Pembe Altın', white:'Beyaz Altın' };
-const PRESET_HSL  = { yellow:[38,82,46],   rose:[22,46,58],    white:[0,0,64]     };
-const ROUGH_MAP   = { polished:0.07, satin:0.22, brushed:0.40, matte:0.62 };
+const PRESET_HSL  = { yellow:[36,72,38],   rose:[22,46,58],    white:[0,0,64]     };
+const ROUGH_MAP   = { polished:0.12, satin:0.24, brushed:0.42, matte:0.65 };
 
-// Rose-named mesh: brushed satin finish matching photo
-const ROSE_ROUGH = 0.40;
+// Both bands share the same satin roughness for visual harmony
+const YELLOW_ROUGH = 0.18;   // rich satin — not mirror, not brushed
+const ROSE_ROUGH   = 0.38;   // slightly more brushed (fırçalanmış)
 
 const mv = document.getElementById('mv');
 
@@ -594,10 +595,15 @@ function applyMaterials() {
       let color = S.customColor ? [...S.customColor] : [...TONES[S.tone]];
       let rough = S.rough;
 
-      // Rose-named mesh: brushed satin (matching photo) regardless of tone
-      if (!S.customColor && looksLikeRose(name) && S.tone === 'yellow') {
-        color = [...TONES.rose];
-        rough = ROSE_ROUGH;
+      if (!S.customColor) {
+        if (looksLikeRose(name) && S.tone === 'yellow') {
+          // Rose accent band: dusty satin
+          color = [...TONES.rose];
+          rough = ROSE_ROUGH;
+        } else if (S.tone === 'yellow') {
+          // Yellow band: rich satin override (ignore user roughness preset for realism)
+          rough = S.rough > 0.35 ? S.rough : Math.max(S.rough, YELLOW_ROUGH);
+        }
       }
 
       pbr.setBaseColorFactor(color);
@@ -758,8 +764,9 @@ function resetAll() {
   document.getElementById('toneLabel').textContent = TONE_NAMES.yellow;
   syncColorUI(...PRESET_HSL.yellow);
   [0,1,2,3].forEach(i => document.getElementById('fb'+i)?.classList.remove('active'));
-  document.getElementById('fb0')?.classList.add('active');
-  document.getElementById('finishLabel').textContent = 'Parlak';
+  document.getElementById('fb0')?.classList.remove('active');
+  document.getElementById('fb1')?.classList.add('active');
+  document.getElementById('finishLabel').textContent = 'Satiné';
   applyMaterials();
 }
 
